@@ -3,12 +3,12 @@
 import os,sys
 import urllib2
 import pickle
-from pixiv_api import Pixiv
+from pixiv_api2 import Pixiv
 
 config_dir=os.environ.get("XDG_CONFIG_HOME",os.path.expanduser("~/.config"))
 
 def print_welcome():
-    print 'pixiv Downloader (C) 2013 Volvagia356'
+    print 'pixiv Downloader (C) 2013 Volvagia356 (C) 2014 Theonik'
     print ''
 
 def print_usage():
@@ -39,7 +39,10 @@ def download_work(work,prefix):
             filename="{}_p{}.{}".format(work.id,page,work.format)
             page+=1
         else:
-            filename="{}.{}".format(work.id,work.format)
+            if 'zip' in request.get_selector():
+                filename="{}.zip".format(work.id)
+            else:
+                filename="{}.{}".format(work.id,work.format)
         full_path=prefix+'/'+filename
         if os.path.isfile(full_path):
             print filename, "already exists."
@@ -63,10 +66,10 @@ def main():
     if len(sys.argv)==3:
         directory=sys.argv[2]
     else:
-        directory='.'
+        directory='./'
     session_id=get_session_config()
     p=Pixiv(session_id)
-    works=p.get_works_all(artist_id)
+    works=p.get_works_all()
     for work in works:
         download_work(work,directory)
     pickle.dump(works,open(directory+"/metadata.pickle",'wb'))
