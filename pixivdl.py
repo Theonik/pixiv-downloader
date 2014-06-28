@@ -3,7 +3,7 @@
 import os,sys
 import urllib2
 import pickle
-from pixiv_api2 import Pixiv
+from pixiv_api import Pixiv
 
 config_dir=os.environ.get("XDG_CONFIG_HOME",os.path.expanduser("~/.config"))
 
@@ -66,10 +66,10 @@ def main():
     if len(sys.argv)==3:
         directory=sys.argv[2]
     else:
-        directory='./'
+        directory='.'
     session_id=get_session_config()
     p=Pixiv(session_id)
-    works=p.get_works_all()
+    works=p.get_works_all(artist_id)
     for work in works:
         download_work(work,directory)
     pickle.dump(works,open(directory+"/metadata.pickle",'wb'))
