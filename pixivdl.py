@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os,sys
+import os,sys,errno
 import urllib2
 import pickle
 from pixiv_api import Pixiv
@@ -63,13 +63,23 @@ def main():
         print_usage()
         sys.exit()
     artist_id=sys.argv[1]
-    if len(sys.argv)==3:
-        directory=sys.argv[2]
-    else:
-        directory='.'
     session_id=get_session_config()
     p=Pixiv(session_id)
     works=p.get_works_all(artist_id)
+    if len(sys.argv)==3:
+        directory=sys.argv[2]
+    else:
+        if works:
+            directory = "./img/{}-(ID_{})".format(works[0].artist_nickname,artist_id)
+            try:
+                os.makedirs(directory)
+                os.makedirs(directory)
+            except OSError as exception:
+                if exception.errno != errno.EEXIST:
+                    raise
+        else:
+            print 'This request is empty.'
+            sys.exit()
     for work in works:
         download_work(work,directory)
     pickle.dump(works,open(directory+"/metadata.pickle",'wb'))

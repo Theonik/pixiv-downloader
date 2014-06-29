@@ -17,8 +17,8 @@ found in the URL. For example, ```http://www.pixiv.net/member.php?id=92448``` wo
 have an ID of ```92448```.
 
 ```directory``` specifies the directory in which works would be downloaded to.
-It is optional, and works will be downloaded to the present working directory
-if it is not specified.
+It is optional, and works will be downloaded to a created directory inside the
+working directory in the format './img/artist_nickname(artist_ID)'
 
 A ```metadata.pickle``` file is also placed in the download directory. This file
 is a Python pickle of the ```Work``` objects from the ```pixiv_api``` module
