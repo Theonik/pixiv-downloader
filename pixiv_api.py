@@ -5,18 +5,22 @@ import csv
 import random
 
 base_url = "http://spapi.pixiv.net/"
-attributes = ['id', 'artist_id', 'format', 'title', 'img_folder', 'artist_name',
+work_attributes = ['id', 'artist_id', 'format', 'title', 'img_folder', 'artist_name',
             'thumbnail_url', '', '', 'preview_url', '', '', 'upload_time', 'tags',
             'application', 'ratings', 'total_rating', 'views', 'description',
             'novel_pages', '', '', '', '', 'artist_nickname', '', '', '',
             '', 'artist_avatar_url', '']
 
+artist_attributes = ['', 'artist_id', '', '', '', 'artist_name', 'artist_avatar_url',
+            '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+            'artist_nickname', '', '']
+
 class Work:
     def __init__(self, line):
         self.line = line
         for i in range(len(line)):
-            if attributes[i]=='' : continue
-            else: setattr(self, attributes[i], line[i])
+            if work_attributes[i]=='' : continue
+            else: setattr(self, work_attributes[i], line[i])
         self.img_folder = self.img_folder.zfill(2)
 
     def get_full_url(self, page=None):
@@ -60,10 +64,17 @@ class Artist:
     def __init__(self, line):
         self.line = line
         for i in range(len(line)):
-            if attributes[i]=='' : continue
-            else: setattr(self, attributes[i], line[i])
+            if artist_attributes[i]=='' : continue
+            else: setattr(self, artist_attributes[i], line[i])
 
 class Pixiv:
+    FEED_URI = "/iphone/new_illust.php"
+    BOOKMARK_FEED_URI = "iphone/bookmark_user_new_illust.php"
+    ARTIST_URI = "iphone/member_illust.php"
+    TAG_URI = "iphone/tags.php"
+    ARTIST_BOOKMARK_URI = "/iphone/bookmark_user_all.php"
+
+
     def __init__(self, session_id=''):
         self.set_session_id(session_id)
 
@@ -71,36 +82,42 @@ class Pixiv:
         self.session_id = session_id
 
     def make_request(self, url, query={}):
-        query["PHPSESSID"] = self.session_id
+        query['PHPSESSID'] = self.session_id
         query_string = urllib.urlencode(query)
         url = base_url+url+"?"+query_string
         return urllib2.urlopen(url)
 
-    def get_works_page(self, member_id, page=1):
-        query = {
-            'id': member_id,
-            'p': page,
-        }
+    def get_page(self, request_uri, query={}):
         try:
-            data = self.make_request("iphone/member_illust.php",query)
+            data = self.make_request(request_uri, query)
             lines = csv.reader(data)
         except urllib2.HTTPError as e:
-            error_string = "Failed to get page " + str(page) + " of artist ID:" + str(member_id)
+            error_string = "Failed to get " + query + " from " + request_uri + "with return " + e.code
             print error_string
-            f = open('error.log','a')
-            f.write(error_string + "\n")
-            f.close()
             return ''
         works = []
         for line in lines:
             works.append(Work(line))
         return works
 
-    def get_works_id(self, member_id, last_id):
+    def get_pages(self, request_uri, query={}, start_page=1, end_page=''):
+        page = start_page
+        works = []
+        while True:
+            query['p'] = page
+            current_works = self.get_page(request_uri, query)
+            if end_page and page > end_page: break
+            if len(current_works)==0: break
+            works.extend(current_works)
+            page += 1
+        return works
+
+    def get_pages_id(self, request_uri, last_id, query={}):
         page = 1
         works = []
         while True:
-            current_works = self.get_works_page(member_id,page)
+            query['p'] = page
+            current_works = self.get_page(request_uri, query)
             if len(current_works)==0: break
             for current_work in current_works:
                 if int(current_work.id) < last_id: return works
@@ -108,49 +125,29 @@ class Pixiv:
             page += 1
         return works
 
-    def get_works_all(self, member_id):
-        page = 1
-        works = []
-        while True:
-            current_works = self.get_works_page(member_id,page)
-            if len(current_works)==0: break
-            works.extend(current_works)
-            page += 1
+    def get_works_id(self, member_id, last_id):
+        query = {
+            'id': member_id
+        }
+        works = self.get_pages_id(self.ARTIST_URI, last_id, query)
         return works
 
-    def get_feed_page(self, page=1):
+    def get_works_all(self, member_id):
         query = {
-            'p': page,
+            'id': member_id
         }
-        data = self.make_request("iphone/bookmark_user_new_illust.php", query)
-        lines = csv.reader(data)
-        works = []
-        for line in lines:
-            works.append(Work(line))
+        works = self.get_pages(self.ARTIST_URI, query)
         return works
 
     def get_feed_pages(self, start_page, end_page):
-        page = start_page
-        works = []
-        while True:
-            current_works = self.get_feed_page(page)
-            if page > end_page: break
-            if len(current_works)==0: break
-            works.extend(current_works)
-            page += 1
+        works = self.get_pages(self.BOOKMARK_FEED_URI, {}, start_page, end_page)
         return works
 
     def get_feed_all(self):
-        page = 1
-        works = []
-        while True:
-            current_works = self.get_feed_page(page)
-            if len(current_works)==0: break
-            works.extend(current_works)
-            page += 1
+        works = self.get_pages(self.BOOKMARK_FEED_URI)
         return works
 
-    def get_artists_page(self, page=1,private_query='show'):
+    def get_artists_page(self, page=1, private_query='show'):
         query = {
             'rest': private_query,
             'p': page,
@@ -169,7 +166,7 @@ class Pixiv:
         page = 1
         artists = []
         while True:
-            current_artists=self.get_artists_page(page, private_query)
+            current_artists = self.get_artists_page(page, private_query)
             if len(current_artists)==0: break
             artists.extend(current_artists)
             page += 1
