@@ -147,6 +147,13 @@ class Pixiv:
         works = self.get_pages(self.BOOKMARK_FEED_URI)
         return works
 
+    def get_tag_all(self, tag):
+        query = {
+            'tag': tag,
+        }
+        works = self.get_pages(self.TAG_URI, query)
+        return works
+
     def get_artists_page(self, page=1, private_query='show'):
         query = {
             'rest': private_query,
