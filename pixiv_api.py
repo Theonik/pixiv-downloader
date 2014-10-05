@@ -40,6 +40,9 @@ class Work:
         else:
             work_id = self.id
         date_arr = re.split('[- :]', self.upload_time)
+        uri_arr = self.preview_url.split('/')
+        if len(uri_arr) > 11:
+            date_arr = uri_arr[7:13]
         if page==None:
             if int(self.id) > 46270952:
                 img_url = single_fmt.format(random.choice([1,2]),date_arr[0],date_arr[1],date_arr[2],
